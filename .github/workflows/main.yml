@@ -1,0 +1,43 @@
+name: MacRDP
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: MacRDP
+    runs-on: macos-latest
+
+    steps:
+    - name: Enable Remote Access (No ngrok)
+      run: |
+        curl -s -o start.sh -L "https://raw.githubusercontent.com/rdpfreeofcost/github-vm/main/mac/start.sh"
+        chmod +x start.sh
+        bash start.sh
+
+    - name: Install Remote.it CLI
+      run: |
+        curl -L -o remoteit-cli.pkg https://github.com/remoteit/cli/releases/latest/download/remoteit-cli.pkg
+        sudo installer -pkg remoteit-cli.pkg -target /
+        remoteit version
+
+    - name: Login to Remote.it
+      env:
+        REMOTEIT_USERNAME: ${{ secrets.REMOTEIT_USERNAME }}
+        REMOTEIT_PASSWORD: ${{ secrets.REMOTEIT_PASSWORD }}
+      run: |
+        remoteit login --username "$REMOTEIT_USERNAME" --password "$REMOTEIT_PASSWORD"
+
+    - name: Register VNC in Remote.it
+      run: |
+        remoteit agent start
+        remoteit add --name MacVNC --port 5900 --host 127.0.0.1
+        remoteit list
+
+    - name: VNC Login Info
+      run: |
+        chmod +x login.sh
+        bash login.sh
+        echo "✅ VNC service is now registered with Remote.it"
+
+    - name: Debug with tmate (Optional)
+      uses: mxschmitt/action-tmate@v2
